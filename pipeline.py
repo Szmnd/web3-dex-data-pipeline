@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 class Web3DataPipeline:
     def __init__(self, pairs: list):
         self.pairs = pairs
-        self.base_url = "https://api.coingecko.com/api/v3" # Używamy publicznego API jako endpointu testowego
+        self.base_url = "https://api.coingecko.com/api/v3"
         
     async def fetch_market_data(self, session: aiohttp.ClientSession, pair: str) -> dict:
         """Asynchroniczne pobieranie danych rynkowych dla wybranej pary"""
@@ -51,22 +51,19 @@ class Web3DataPipeline:
             df_prices = pd.DataFrame(data['prices'], columns=['timestamp', 'price'])
             df_volumes = pd.DataFrame(data['total_volumes'], columns=['timestamp', 'volume'])
             
-            # Łączenie po timestampie
+            
             df = pd.merge(df_prices, df_volumes, on='timestamp')
             df['datetime'] = pd.to_datetime(df['timestamp'], unit='ms')
             df['token_pair'] = pair
             
-            # Wykorzystanie NumPy do analizy statystycznej i wykrywania anomalii wolumenu (Z-score)
             volume_mean = df['volume'].mean()
             volume_std = df['volume'].std()
             
-            # Unikanie dzielenia przez zero przy niskiej zmienności
             if volume_std > 0:
                 df['volume_z_score'] = (df['volume'] - volume_mean) / volume_std
             else:
                 df['volume_z_score'] = 0.0
                 
-            # Flagowanie anomalii (wolumen 2 standardowe odchylenia powyżej średniej)
             df['is_anomaly'] = np.where(df['volume_z_score'] > 2.0, True, False)
             
             processed_records.append(df)
@@ -77,7 +74,6 @@ class Web3DataPipeline:
         return pd.DataFrame()
 
 if __name__ == "__main__":
-    # Testowe tokeny do pipeline
     target_tokens = ['ethereum', 'solana', 'wrapped-bitcoin']
     
     pipeline = Web3DataPipeline(pairs=target_tokens)
